@@ -21,25 +21,42 @@ const AppNavigator = () => {
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#F5F5F7' }
+          contentStyle: { backgroundColor: '#F5F5F7' },
+          animation: 'fade_from_bottom',
+          animationDuration: 300,
         }}
       >
-        <Stack.Screen name="Landing" component={LandingScreen} />
+        {/* Landing */}
+        <Stack.Screen
+          name="Landing"
+          component={LandingScreen}
+          options={{ animation: 'fade' }}
+        />
+
+        {/* Auth */}
         <Stack.Screen name="Login" component={LoginScreen} />
-        
-        {/* Registration Flow */}
         <Stack.Screen name="RegisterStep1" component={RegisterStep1} />
         <Stack.Screen name="RegisterStep2" component={RegisterStep2} />
         <Stack.Screen name="RegisterStep3" component={RegisterStep3} />
-        
-        {/* AI Onboarding Flow */}
+
+        {/* Onboarding */}
         <Stack.Screen name="Onboarding1" component={Onboarding1} />
         <Stack.Screen name="Onboarding2" component={Onboarding2} />
         <Stack.Screen name="Onboarding3" component={Onboarding3} />
-        <Stack.Screen name="LoadingScreen" component={LoadingScreen} />
-        
-        {/* Main App */}
-        <Stack.Screen name="RegistryScreen" component={RegistryScreen} />
+
+        {/* AI Loading */}
+        <Stack.Screen
+          name="LoadingScreen"
+          component={LoadingScreen}
+          options={{ animation: 'fade', gestureEnabled: false }}
+        />
+
+        {/* Main Registry */}
+        <Stack.Screen
+          name="RegistryScreen"
+          component={RegistryScreen}
+          options={{ animation: 'fade', gestureEnabled: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
