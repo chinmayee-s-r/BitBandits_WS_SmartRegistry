@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 40,
     fontWeight: '300',
-    fontFamily: 'System', // iOS default serif/System is clean
+    fontFamily: 'System',
     color: COLORS.text,
     marginBottom: 16,
     letterSpacing: 1,

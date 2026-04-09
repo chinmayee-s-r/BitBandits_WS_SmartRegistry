@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { COLORS, SIZES } from '../constants/colors';
-import { Sparkles, X } from 'lucide-react-native'; // Assuming lucide-react-native is installed
+import { Sparkles, X } from 'lucide-react-native';
 
 const AIPopup = ({ product, onClose }) => {
   if (!product) return null;
