@@ -1,10 +1,12 @@
 export const CATEGORIES = [
-  { id: '1', name: 'Kitchen', icon: '🍳' },
-  { id: '2', name: 'Dining', icon: '🍽️' },
-  { id: '3', name: 'Decor', icon: '🪴' },
-  { id: '4', name: 'Bedding', icon: '🛏️' },
-  { id: '5', name: 'Bath', icon: '🛁' },
-  { id: '6', name: 'Outdoor', icon: '☀️' },
+  { id: '1', name: 'Bathroom', image: require('../assets/Images/Categories/Bathroom.png') },
+  { id: '2', name: 'Bedroom', image: require('../assets/Images/Categories/Bedroom.png') },
+  { id: '3', name: 'Crockery', image: require('../assets/Images/Categories/Crockery.png') },
+  { id: '4', name: 'Decor', image: require('../assets/Images/Categories/Decor.png') },
+  { id: '5', name: 'Electronics', image: require('../assets/Images/Categories/Electronics.png') },
+  { id: '6', name: 'Furniture', image: require('../assets/Images/Categories/Furniture.png') },
+  { id: '7', name: 'Kitchen', image: require('../assets/Images/Categories/Kitchen.png') },
+  { id: '8', name: 'Lighting', image: require('../assets/Images/Categories/Lighting.png') },
 ];
 
 export const EVENT_TYPES = [
@@ -15,39 +17,15 @@ export const EVENT_TYPES = [
   { label: 'Anniversary', value: 'anniversary' },
 ];
 
-export const BUDGET_RANGES = [
-  { label: 'Under $500', min: 0, max: 500 },
-  { label: '$500 – $1,000', min: 500, max: 1000 },
-  { label: '$1,000 – $2,500', min: 1000, max: 2500 },
-  { label: '$2,500 – $5,000', min: 2500, max: 5000 },
-  { label: '$5,000+', min: 5000, max: null },
-];
-
 export const THEMES = [
-  {
-    id: 'v1',
-    name: 'Minimal',
-    description: 'Clean lines, neutral palette',
-    image: 'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'v2',
-    name: 'Rustic',
-    description: 'Warm textures, natural materials',
-    image: 'https://images.unsplash.com/photo-1558211583-d26f610b1ebb?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'v3',
-    name: 'Luxury',
-    description: 'Refined elegance, premium finishes',
-    image: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&w=600&q=80',
-  },
-  {
-    id: 'v4',
-    name: 'Pastel',
-    description: 'Soft tones, gentle warmth',
-    image: 'https://images.unsplash.com/photo-1616047006789-b7af5afb8c20?auto=format&fit=crop&w=600&q=80',
-  },
+  { id: 'v1', name: 'Aesthetic', image: require('../assets/Images/Themes/Aesthetic.png') },
+  { id: 'v2', name: 'Budget', image: require('../assets/Images/Themes/Budget.png') },
+  { id: 'v3', name: 'Classic', image: require('../assets/Images/Themes/Classic.png') },
+  { id: 'v4', name: 'Cozy', image: require('../assets/Images/Themes/Cozy.png') },
+  { id: 'v5', name: 'Luxury', image: require('../assets/Images/Themes/Luxury.png') },
+  { id: 'v6', name: 'Minimalist', image: require('../assets/Images/Themes/Minimalist.png') },
+  { id: 'v7', name: 'Modern', image: require('../assets/Images/Themes/Modern.png') },
+  { id: 'v8', name: 'Premium', image: require('../assets/Images/Themes/Premium.png') },
 ];
 
 export const PRODUCTS = [

@@ -9,6 +9,7 @@ import {
   Modal,
   Animated,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { COLORS, SIZES, SHADOWS } from '../constants/colors';
 import { PRODUCTS } from '../constants/mockData';
@@ -23,11 +24,13 @@ const RegistryScreen = () => {
   const [activeFilter, setActiveFilter] = useState('All');
   const headerFade = useRef(new Animated.Value(0)).current;
 
+  const nd = Platform.OS !== 'web';
+
   useEffect(() => {
     Animated.timing(headerFade, {
       toValue: 1,
       duration: 600,
-      useNativeDriver: true,
+      useNativeDriver: nd,
     }).start();
   }, []);
 

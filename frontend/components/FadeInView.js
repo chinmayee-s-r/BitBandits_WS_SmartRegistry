@@ -1,5 +1,8 @@
 import React, { useRef, useEffect } from 'react';
-import { Animated, StyleSheet } from 'react-native';
+import { Animated, Platform } from 'react-native';
+
+// useNativeDriver: true is only supported on native, not on react-native-web
+const canUseNativeDriver = Platform.OS !== 'web';
 
 const FadeInView = ({ children, delay = 0, duration = 500, style, translateY = 20 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -11,13 +14,13 @@ const FadeInView = ({ children, delay = 0, duration = 500, style, translateY = 2
         toValue: 1,
         duration,
         delay,
-        useNativeDriver: true,
+        useNativeDriver: canUseNativeDriver,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
         duration,
         delay,
-        useNativeDriver: true,
+        useNativeDriver: canUseNativeDriver,
       }),
     ]).start();
   }, []);

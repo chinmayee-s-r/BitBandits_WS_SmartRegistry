@@ -8,6 +8,8 @@ import {
   Platform,
   TouchableOpacity,
   ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { COLORS, SIZES } from '../constants/colors';
 import InputField from '../components/InputField';
@@ -24,8 +26,8 @@ const LoginScreen = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -69,7 +71,7 @@ const LoginScreen = ({ navigation }) => {
           <FadeInView delay={400} style={styles.footer}>
             <Button
               title="Sign In"
-              onPress={() => navigation.navigate('Onboarding1')}
+              onPress={() => navigation.navigate('HomeHub')}
             />
             <TouchableOpacity
               style={styles.cancelBtn}

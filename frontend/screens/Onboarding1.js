@@ -6,11 +6,26 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { COLORS, SIZES, SHADOWS } from '../constants/colors';
-import { CATEGORIES } from '../constants/mockData';
 import Button from '../components/Button';
 import FadeInView from '../components/FadeInView';
+
+const LOCAL_CATEGORIES = [
+  { id: '1', name: 'Bathroom', image: require('../assets/Images/Categories/Bathroom.png') },
+  { id: '2', name: 'Bedroom', image: require('../assets/Images/Categories/Bedroom.png') },
+  { id: '3', name: 'Crockery', image: require('../assets/Images/Categories/Crockery.png') },
+  { id: '4', name: 'Decor', image: require('../assets/Images/Categories/Decor.png') },
+  { id: '5', name: 'Electronics', image: require('../assets/Images/Categories/Electronics.png') },
+  { id: '6', name: 'Furniture', image: require('../assets/Images/Categories/Furniture.png') },
+  { id: '7', name: 'Kitchen', image: require('../assets/Images/Categories/Kitchen.png') },
+  { id: '8', name: 'Lighting', image: require('../assets/Images/Categories/Lighting.png') },
+];
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - SIZES.padding * 2 - 16) / 2;
 
 const Onboarding1 = ({ navigation }) => {
   const [selected, setSelected] = useState([]);
@@ -45,27 +60,36 @@ const Onboarding1 = ({ navigation }) => {
 
         <FadeInView delay={300} style={styles.chipSection}>
           <ScrollView
-            contentContainerStyle={styles.chipContainer}
+            contentContainerStyle={styles.gridContainer}
             showsVerticalScrollIndicator={false}
           >
-            {CATEGORIES.map((cat) => {
+            {LOCAL_CATEGORIES.map((cat) => {
               const isSelected = selected.includes(cat.id);
               return (
                 <TouchableOpacity
                   key={cat.id}
-                  style={[styles.chip, isSelected && styles.chipActive]}
+                  style={[styles.card, isSelected && styles.cardActive]}
                   onPress={() => toggleCategory(cat.id)}
-                  activeOpacity={0.7}
+                  activeOpacity={0.8}
                 >
-                  <Text style={styles.chipIcon}>{cat.icon}</Text>
-                  <Text
-                    style={[
-                      styles.chipText,
-                      isSelected && styles.chipTextActive,
-                    ]}
-                  >
-                    {cat.name}
-                  </Text>
+                  <Image source={cat.image} style={styles.cardImage} resizeMode="cover" />
+                  {isSelected && (
+                    <View style={styles.selectedOverlay}>
+                      <View style={styles.checkmarkCircle}>
+                        <Text style={styles.checkmark}>✓</Text>
+                      </View>
+                    </View>
+                  )}
+                  <View style={styles.cardLabelContainer}>
+                    <Text
+                      style={[
+                        styles.cardText,
+                        isSelected && styles.cardTextActive,
+                      ]}
+                    >
+                      {cat.name}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -87,6 +111,7 @@ const Onboarding1 = ({ navigation }) => {
             onPress={() =>
               navigation.navigate('Onboarding2', {
                 selectedCategories: selected,
+                selectedCategoryObjects: LOCAL_CATEGORIES.filter(c => selected.includes(c.id)),
               })
             }
             disabled={selected.length === 0}
@@ -157,37 +182,68 @@ const styles = StyleSheet.create({
   chipSection: {
     flex: 1,
   },
-  chipContainer: {
+  gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    justifyContent: 'space-between',
+    paddingBottom: 20,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderRadius: SIZES.radiusFull,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+  card: {
+    width: CARD_WIDTH,
+    height: CARD_WIDTH * 1.1,
+    marginBottom: 16,
+    borderRadius: SIZES.radius,
+    overflow: 'hidden',
     backgroundColor: COLORS.white,
     ...SHADOWS.small,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
-  chipActive: {
-    backgroundColor: COLORS.text,
+  cardActive: {
     borderColor: COLORS.text,
   },
-  chipIcon: {
-    fontSize: 18,
-    marginRight: 8,
+  cardImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
   },
-  chipText: {
+  selectedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkmarkCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.text,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkmark: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  cardLabelContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  cardText: {
     fontSize: SIZES.fontRegular,
     color: COLORS.text,
-    fontWeight: '500',
+    fontWeight: '600',
+    textAlign: 'center',
   },
-  chipTextActive: {
-    color: COLORS.white,
+  cardTextActive: {
+    color: COLORS.text,
   },
   selectionCount: {
     fontSize: SIZES.fontSmall,

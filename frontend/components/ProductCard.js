@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Animated, Dimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
 import { COLORS, SIZES, SHADOWS } from '../constants/colors';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -8,19 +8,21 @@ const ProductCard = ({ product, onPress, index = 0 }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(24)).current;
 
+  const nd = Platform.OS !== 'web';
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 500,
         delay: index * 100,
-        useNativeDriver: true,
+        useNativeDriver: nd,
       }),
       Animated.timing(translateY, {
         toValue: 0,
         duration: 500,
         delay: index * 100,
-        useNativeDriver: true,
+        useNativeDriver: nd,
       }),
     ]).start();
   }, []);
@@ -76,7 +78,7 @@ const ProductCard = ({ product, onPress, index = 0 }) => {
         activeOpacity={0.92}
       >
         <View style={styles.imageContainer}>
-          <Image source={{ uri: product.image }} style={styles.image} />
+          <Image source={{ uri: product.image }} style={styles.image} resizeMode="cover" />
           {product.status === 'viewing' && (
             <View style={styles.viewingBadge}>
               <View style={styles.liveDot} />
@@ -114,7 +116,6 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   viewingBadge: {
     position: 'absolute',

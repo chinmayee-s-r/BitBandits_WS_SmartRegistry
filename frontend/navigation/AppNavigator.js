@@ -10,8 +10,11 @@ import RegisterStep3 from '../screens/RegisterStep3';
 import Onboarding1 from '../screens/Onboarding1';
 import Onboarding2 from '../screens/Onboarding2';
 import Onboarding3 from '../screens/Onboarding3';
+import IntentInputScreen from '../screens/IntentInputScreen';
 import LoadingScreen from '../screens/LoadingScreen';
 import RegistryScreen from '../screens/RegistryScreen';
+import HomeHubScreen from '../screens/HomeHubScreen';
+import SearchScreen from '../screens/SearchScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -44,6 +47,9 @@ const AppNavigator = () => {
         <Stack.Screen name="Onboarding2" component={Onboarding2} />
         <Stack.Screen name="Onboarding3" component={Onboarding3} />
 
+        {/* Intent Input (optional refinement) */}
+        <Stack.Screen name="IntentInput" component={IntentInputScreen} />
+
         {/* AI Loading */}
         <Stack.Screen
           name="LoadingScreen"
@@ -56,6 +62,18 @@ const AppNavigator = () => {
           name="RegistryScreen"
           component={RegistryScreen}
           options={{ animation: 'fade', gestureEnabled: false }}
+        />
+
+        {/* Home Hub & Search */}
+        <Stack.Screen 
+          name="HomeHub" 
+          component={HomeHubScreen} 
+          options={{ animation: 'fade', gestureEnabled: false }}
+        />
+        <Stack.Screen 
+          name="SearchScreen" 
+          component={SearchScreen} 
+          options={{ animation: 'fade_from_bottom' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

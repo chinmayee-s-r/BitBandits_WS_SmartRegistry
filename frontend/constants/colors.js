@@ -1,3 +1,17 @@
+import { Platform } from 'react-native';
+
+// Helper: produces either native RN shadow props or a CSS boxShadow string for web
+const shadow = (y, blur, opacity) =>
+  Platform.OS === 'web'
+    ? { boxShadow: `0px ${y}px ${blur}px rgba(0,0,0,${opacity})` }
+    : {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: y },
+        shadowOpacity: opacity,
+        shadowRadius: blur,
+        elevation: Math.round(blur / 3),
+      };
+
 export const COLORS = {
   background: '#F5F5F7',
   card: '#FFFFFF',
@@ -48,33 +62,19 @@ export const SIZES = {
 };
 
 export const SHADOWS = {
-  small: {
-    shadowColor: COLORS.shadowColor,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  medium: {
-    shadowColor: COLORS.shadowColor,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  large: {
-    shadowColor: COLORS.shadowColor,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    elevation: 5,
-  },
+  small: shadow(1, 3, 0.04),
+  medium: shadow(4, 12, 0.06),
+  large: shadow(8, 24, 0.08),
   sheet: {
-    shadowColor: COLORS.shadowColor,
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-    elevation: 8,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px -4px 20px rgba(0,0,0,0.10)' }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.1,
+          shadowRadius: 20,
+          elevation: 8,
+        }),
   },
 };
 

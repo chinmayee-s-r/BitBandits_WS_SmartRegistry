@@ -1,11 +1,13 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Image, Platform, Modal, KeyboardAvoidingView } from 'react-native';
 import { COLORS, SIZES, SHADOWS } from '../constants/colors';
 import { AI_TAGS } from '../constants/mockData';
 
 const AIPopup = ({ product, onClose }) => {
   const slideAnim = useRef(new Animated.Value(300)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
+
+  const nd = Platform.OS !== 'web';
 
   useEffect(() => {
     if (product) {
@@ -14,12 +16,12 @@ const AIPopup = ({ product, onClose }) => {
           toValue: 0,
           damping: 22,
           stiffness: 200,
-          useNativeDriver: true,
+          useNativeDriver: nd,
         }),
         Animated.timing(overlayAnim, {
           toValue: 1,
           duration: 300,
-          useNativeDriver: true,
+          useNativeDriver: nd,
         }),
       ]).start();
     }
@@ -30,12 +32,12 @@ const AIPopup = ({ product, onClose }) => {
       Animated.timing(slideAnim, {
         toValue: 300,
         duration: 250,
-        useNativeDriver: true,
+        useNativeDriver: nd,
       }),
       Animated.timing(overlayAnim, {
         toValue: 0,
         duration: 250,
-        useNativeDriver: true,
+        useNativeDriver: nd,
       }),
     ]).start(() => onClose());
   };
@@ -50,92 +52,96 @@ const AIPopup = ({ product, onClose }) => {
   } : null;
 
   return (
-    <View style={styles.container}>
-      <Animated.View
-        style={[styles.overlay, { opacity: overlayAnim }]}
-      >
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={handleClose}
-        />
-      </Animated.View>
+    <Modal transparent visible={!!product} animationType="none" onRequestClose={handleClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <View style={styles.container}>
+          <Animated.View
+            style={[styles.overlay, { opacity: overlayAnim }]}
+          >
+            <TouchableOpacity
+              style={StyleSheet.absoluteFill}
+              activeOpacity={1}
+              onPress={handleClose}
+            />
+          </Animated.View>
 
-      <Animated.View
-        style={[
-          styles.sheet,
-          { transform: [{ translateY: slideAnim }] },
-        ]}
-      >
-        {/* Handle bar */}
-        <View style={styles.handleContainer}>
-          <View style={styles.handle} />
-        </View>
-
-        {/* AI Badge */}
-        <View style={styles.aiBadge}>
-          <Text style={styles.aiIcon}>✦</Text>
-          <Text style={styles.aiLabel}>AI Stylist</Text>
-        </View>
-
-        {/* Product name */}
-        <Text style={styles.productName}>{product.name}</Text>
-        <Text style={styles.productPrice}>${product.price}</Text>
-
-        {/* AI Tag */}
-        <View style={[styles.tagContainer, { backgroundColor: tag.color + '12' }]}>
-          <View style={[styles.tagDot, { backgroundColor: tag.color }]} />
-          <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
-        </View>
-
-        {/* AI Message */}
-        <Text style={styles.message}>{product.aiMessage}</Text>
-
-        {/* Real-time viewers */}
-        {product.viewers > 0 && (
-          <View style={styles.viewerRow}>
-            <Text style={styles.viewerIcon}>👁</Text>
-            <Text style={styles.viewerText}>
-              {product.viewers} {product.viewers === 1 ? 'person is' : 'people are'} viewing this
-            </Text>
-          </View>
-        )}
-
-        {/* Recommended product */}
-        {recommendedProduct && (
-          <View style={styles.recommendedCard}>
-            <Text style={styles.recommendedLabel}>You might also love</Text>
-            <View style={styles.recommendedRow}>
-              <Image
-                source={{ uri: recommendedProduct.image }}
-                style={styles.recommendedImage}
-              />
-              <View style={styles.recommendedInfo}>
-                <Text style={styles.recommendedName}>{recommendedProduct.name}</Text>
-                <Text style={styles.recommendedPrice}>${recommendedProduct.price}</Text>
-              </View>
+          <Animated.View
+            style={[
+              styles.sheet,
+              { transform: [{ translateY: slideAnim }] },
+            ]}
+          >
+            {/* Handle bar */}
+            <View style={styles.handleContainer}>
+              <View style={styles.handle} />
             </View>
-          </View>
-        )}
 
-        {/* Action buttons */}
-        <TouchableOpacity style={styles.primaryAction}>
-          <Text style={styles.primaryActionText}>
-            {product.status === 'purchased' ? 'View Alternatives' : 'Add to Registry'}
-          </Text>
-        </TouchableOpacity>
+            {/* AI Badge */}
+            <View style={styles.aiBadge}>
+              <Text style={styles.aiIcon}>✦</Text>
+              <Text style={styles.aiLabel}>AI Stylist</Text>
+            </View>
 
-        <TouchableOpacity style={styles.secondaryAction} onPress={handleClose}>
-          <Text style={styles.secondaryActionText}>Dismiss</Text>
-        </TouchableOpacity>
-      </Animated.View>
-    </View>
+            {/* Product name */}
+            <Text style={styles.productName}>{product.name}</Text>
+            <Text style={styles.productPrice}>${product.price}</Text>
+
+            {/* AI Tag */}
+            <View style={[styles.tagContainer, { backgroundColor: tag.color + '12' }]}>
+              <View style={[styles.tagDot, { backgroundColor: tag.color }]} />
+              <Text style={[styles.tagText, { color: tag.color }]}>{tag.label}</Text>
+            </View>
+
+            {/* AI Message */}
+            <Text style={styles.message}>{product.aiMessage}</Text>
+
+            {/* Real-time viewers */}
+            {product.viewers > 0 && (
+              <View style={styles.viewerRow}>
+                <Text style={styles.viewerIcon}>👁</Text>
+                <Text style={styles.viewerText}>
+                  {product.viewers} {product.viewers === 1 ? 'person is' : 'people are'} viewing this
+                </Text>
+              </View>
+            )}
+
+            {/* Recommended product */}
+            {recommendedProduct && (
+              <View style={styles.recommendedCard}>
+                <Text style={styles.recommendedLabel}>You might also love</Text>
+                <View style={styles.recommendedRow}>
+                  <Image
+                    source={{ uri: recommendedProduct.image }}
+                    style={styles.recommendedImage}
+                  />
+                  <View style={styles.recommendedInfo}>
+                    <Text style={styles.recommendedName}>{recommendedProduct.name}</Text>
+                    <Text style={styles.recommendedPrice}>${recommendedProduct.price}</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* Action buttons */}
+            <TouchableOpacity style={styles.primaryAction}>
+              <Text style={styles.primaryActionText}>
+                {product.status === 'purchased' ? 'View Alternatives' : 'Add to Registry'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryAction} onPress={handleClose}>
+              <Text style={styles.secondaryActionText}>Dismiss</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1,
     justifyContent: 'flex-end',
   },
   overlay: {

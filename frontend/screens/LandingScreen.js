@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Animated } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Animated, Platform } from 'react-native';
 import { COLORS, SIZES } from '../constants/colors';
 import Button from '../components/Button';
 
@@ -10,35 +10,37 @@ const LandingScreen = ({ navigation }) => {
   const buttonsFade = useRef(new Animated.Value(0)).current;
   const buttonsSlide = useRef(new Animated.Value(20)).current;
 
+  const nd = Platform.OS !== 'web';
+
   useEffect(() => {
     Animated.sequence([
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 800,
-          useNativeDriver: true,
+          useNativeDriver: nd,
         }),
         Animated.timing(titleSlide, {
           toValue: 0,
           duration: 800,
-          useNativeDriver: true,
+          useNativeDriver: nd,
         }),
       ]),
       Animated.timing(subtitleFade, {
         toValue: 1,
         duration: 600,
-        useNativeDriver: true,
+        useNativeDriver: nd,
       }),
       Animated.parallel([
         Animated.timing(buttonsFade, {
           toValue: 1,
           duration: 500,
-          useNativeDriver: true,
+          useNativeDriver: nd,
         }),
         Animated.timing(buttonsSlide, {
           toValue: 0,
           duration: 500,
-          useNativeDriver: true,
+          useNativeDriver: nd,
         }),
       ]),
     ]).start();

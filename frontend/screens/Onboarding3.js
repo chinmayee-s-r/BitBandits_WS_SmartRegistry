@@ -1,92 +1,42 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  Image,
   ScrollView,
+  Image,
   Dimensions,
-  Animated,
 } from 'react-native';
 import { COLORS, SIZES, SHADOWS } from '../constants/colors';
-import { THEMES } from '../constants/mockData';
 import Button from '../components/Button';
 import FadeInView from '../components/FadeInView';
 
-const { width: screenWidth } = Dimensions.get('window');
-const cardPadding = SIZES.padding * 2;
-const cardGap = 16;
-const cardWidth = (screenWidth - cardPadding - cardGap) / 2;
+const THEMES = [
+  { id: 'v1', name: 'Aesthetic', image: require('../assets/Images/Themes/Aesthetic.png') },
+  { id: 'v2', name: 'Budget', image: require('../assets/Images/Themes/Budget.png') },
+  { id: 'v3', name: 'Classic', image: require('../assets/Images/Themes/Classic.png') },
+  { id: 'v4', name: 'Cozy', image: require('../assets/Images/Themes/Cozy.png') },
+  { id: 'v5', name: 'Luxury', image: require('../assets/Images/Themes/Luxury.png') },
+  { id: 'v6', name: 'Minimalist', image: require('../assets/Images/Themes/Minimalist.png') },
+  { id: 'v7', name: 'Modern', image: require('../assets/Images/Themes/Modern.png') },
+  { id: 'v8', name: 'Premium', image: require('../assets/Images/Themes/Premium.png') },
+];
 
-const VibeCard = ({ theme, isSelected, onSelect, index }) => {
-  const scaleAnim = useRef(new Animated.Value(0.92)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        damping: 18,
-        stiffness: 160,
-        delay: index * 120,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 400,
-        delay: index * 120,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  useEffect(() => {
-    Animated.spring(scaleAnim, {
-      toValue: isSelected ? 0.97 : 1,
-      damping: 15,
-      stiffness: 200,
-      useNativeDriver: true,
-    }).start();
-  }, [isSelected]);
-
-  return (
-    <Animated.View
-      style={[
-        styles.cardWrapper,
-        {
-          opacity: opacityAnim,
-          transform: [{ scale: scaleAnim }],
-        },
-      ]}
-    >
-      <TouchableOpacity
-        style={[styles.card, isSelected && styles.cardActive]}
-        onPress={onSelect}
-        activeOpacity={0.92}
-      >
-        <Image source={{ uri: theme.image }} style={styles.cardImage} />
-        <View style={styles.cardOverlay} />
-
-        {/* Selection indicator */}
-        {isSelected && (
-          <View style={styles.selectedBadge}>
-            <Text style={styles.selectedCheck}>✓</Text>
-          </View>
-        )}
-
-        <View style={styles.cardContent}>
-          <Text style={styles.cardName}>{theme.name}</Text>
-          <Text style={styles.cardDescription}>{theme.description}</Text>
-        </View>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - SIZES.padding * 2 - 16) / 2;
 
 const Onboarding3 = ({ navigation }) => {
   const [selectedTheme, setSelectedTheme] = useState(null);
+
+  const toggleTheme = (id) => {
+    if (selectedTheme === id) {
+      setSelectedTheme(null);
+    } else {
+      setSelectedTheme(id);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -108,36 +58,57 @@ const Onboarding3 = ({ navigation }) => {
           </Text>
         </FadeInView>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.gridContainer}
-        >
-          <View style={styles.grid}>
-            {THEMES.map((theme, index) => (
-              <VibeCard
-                key={theme.id}
-                theme={theme}
-                isSelected={selectedTheme === theme.id}
-                onSelect={() => setSelectedTheme(theme.id)}
-                index={index}
-              />
-            ))}
-          </View>
-        </ScrollView>
+        <FadeInView delay={300} style={styles.chipSection}>
+          <ScrollView
+            contentContainerStyle={styles.gridContainer}
+            showsVerticalScrollIndicator={false}
+          >
+            {THEMES.map((theme) => {
+              const isSelected = selectedTheme === theme.id;
+              return (
+                <TouchableOpacity
+                  key={theme.id}
+                  style={[styles.card, isSelected && styles.cardActive]}
+                  onPress={() => toggleTheme(theme.id)}
+                  activeOpacity={0.8}
+                >
+                  <Image source={theme.image} style={styles.cardImage} resizeMode="cover" />
+                  {isSelected && (
+                    <View style={styles.selectedOverlay}>
+                      <View style={styles.checkmarkCircle}>
+                        <Text style={styles.checkmark}>✓</Text>
+                      </View>
+                    </View>
+                  )}
+                  <View style={styles.cardLabelContainer}>
+                    <Text
+                      style={[
+                        styles.cardText,
+                        isSelected && styles.cardTextActive,
+                      ]}
+                    >
+                      {theme.name}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </FadeInView>
 
         {/* Selected display */}
         {selectedTheme && (
-          <FadeInView translateY={10} duration={300}>
-            <Text style={styles.selectedLabel}>
+          <FadeInView translateY={10}>
+            <Text style={styles.selectionCount}>
               {THEMES.find((t) => t.id === selectedTheme)?.name} — selected
             </Text>
           </FadeInView>
         )}
 
-        <FadeInView delay={600} style={styles.footer}>
+        <FadeInView delay={500} style={styles.footer}>
           <Button
             title="Curate My Registry"
-            onPress={() => navigation.navigate('LoadingScreen')}
+            onPress={() => navigation.navigate('IntentInput')}
             disabled={!selectedTheme}
           />
         </FadeInView>
@@ -208,88 +179,82 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: SIZES.fontRegular,
     color: COLORS.textSecondary,
+    marginBottom: 36,
     fontWeight: '400',
     lineHeight: 24,
-    marginBottom: 24,
+  },
+  chipSection: {
+    flex: 1,
   },
   gridContainer: {
-    paddingBottom: 8,
-  },
-  grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: cardGap,
     justifyContent: 'space-between',
-  },
-  cardWrapper: {
-    width: cardWidth,
-    marginBottom: 0,
+    paddingBottom: 20,
   },
   card: {
-    width: '100%',
-    aspectRatio: 0.72,
-    borderRadius: SIZES.radiusLg,
+    width: CARD_WIDTH,
+    height: CARD_WIDTH * 1.1,
+    marginBottom: 16,
+    borderRadius: SIZES.radius,
     overflow: 'hidden',
     backgroundColor: COLORS.white,
-    ...SHADOWS.medium,
+    ...SHADOWS.small,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   cardActive: {
     borderColor: COLORS.text,
-    ...SHADOWS.large,
   },
   cardImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
-  },
-  cardOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-  },
-  selectedBadge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.text,
-    alignItems: 'center',
+  },
+  selectedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.2)',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  selectedCheck: {
+  checkmarkCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.text,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkmark: {
     color: COLORS.white,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
-  cardContent: {
+  cardLabelContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
   },
-  cardName: {
+  cardText: {
     fontSize: SIZES.fontRegular,
-    fontWeight: '600',
     color: COLORS.text,
-    marginBottom: 2,
+    fontWeight: '600',
+    textAlign: 'center',
   },
-  cardDescription: {
-    fontSize: SIZES.fontCaption,
-    color: COLORS.textSecondary,
-    fontWeight: '400',
+  cardTextActive: {
+    color: COLORS.text,
   },
-  selectedLabel: {
+  selectionCount: {
     fontSize: SIZES.fontSmall,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    fontWeight: '400',
-    fontStyle: 'italic',
     marginBottom: 8,
+    fontWeight: '400',
   },
   footer: {
     paddingBottom: 24,

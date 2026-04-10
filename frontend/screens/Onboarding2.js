@@ -1,144 +1,181 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SafeAreaView,
-  TouchableOpacity,
   ScrollView,
+  TextInput,
+  Keyboard,
+  Animated,
+  TouchableOpacity,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { COLORS, SIZES, SHADOWS } from '../constants/colors';
-import { CATEGORIES, BUDGET_RANGES } from '../constants/mockData';
 import Button from '../components/Button';
 import FadeInView from '../components/FadeInView';
+import InputField from '../components/InputField';
+
+const CATEGORIES = [
+  { id: '1', name: 'Bathroom', hint: 'Typical: $40–$200 per item' },
+  { id: '2', name: 'Bedroom', hint: 'Typical: $50–$300 per item' },
+  { id: '3', name: 'Crockery', hint: 'Typical: $30–$150 per set' },
+  { id: '4', name: 'Decor', hint: 'Typical: $20–$150 per item' },
+  { id: '5', name: 'Electronics', hint: 'Typical: $100–$800 per item' },
+  { id: '6', name: 'Furniture', hint: 'Typical: $200–$1500 per piece' },
+  { id: '7', name: 'Kitchen', hint: 'Typical: $50–$400 per item' },
+  { id: '8', name: 'Lighting', hint: 'Typical: $40–$300 per fixture' },
+];
+
+const CategoryPriceRow = ({ category, value, onValueChange, index }) => {
+  const enterAnim = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(enterAnim, {
+      toValue: 1,
+      duration: 500,
+      delay: index * 100, // Stagger rows
+      useNativeDriver: true,
+    }).start();
+  }, [enterAnim, index]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.rowCard,
+        {
+          opacity: enterAnim,
+          transform: [
+            {
+              translateY: enterAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [16, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      <View style={styles.categoryInfo}>
+        <Text style={styles.categoryName} numberOfLines={1}>{category.name}</Text>
+        <Text style={styles.categoryHint}>{category.hint}</Text>
+      </View>
+
+      <View style={styles.rangeContainer}>
+        <InputField
+          containerStyle={{ flex: 1, marginBottom: 0, width: 'auto' }}
+          prefix="$"
+          placeholder="Min"
+          value={String(value?.min || '')}
+          onChangeText={(t) => onValueChange(category.id, 'min', t.replace(/[^0-9]/g, ''))}
+          keyboardType="numeric"
+          returnKeyType="done"
+          maxLength={5}
+        />
+
+        <Text style={styles.toText}>to</Text>
+
+        <InputField
+          containerStyle={{ flex: 1, marginBottom: 0, width: 'auto' }}
+          prefix="$"
+          placeholder="Max"
+          value={String(value?.max || '')}
+          onChangeText={(t) => onValueChange(category.id, 'max', t.replace(/[^0-9]/g, ''))}
+          keyboardType="numeric"
+          returnKeyType="done"
+          maxLength={5}
+        />
+      </View>
+    </Animated.View>
+  );
+};
 
 const Onboarding2 = ({ navigation, route }) => {
-  const selectedCategories = route?.params?.selectedCategories || ['1', '2', '3'];
-  const activeCats = CATEGORIES.filter((c) =>
-    selectedCategories.includes(c.id)
-  );
+  // If no params passed via dev testing, fallback slightly
+  const selectedCategories = route?.params?.selectedCategories || ['1', '4', '7'];
+  const activeCats = CATEGORIES.filter((c) => selectedCategories.includes(c.id));
 
-  // Budget per category
-  const [budgets, setBudgets] = useState(
+  const [prices, setPrices] = useState(() =>
     activeCats.reduce((acc, cat) => {
-      acc[cat.id] = 2; // default index
+      // Parse the hint array natively for default placeholder values
+      let defMin = '50', defMax = '300';
+      if (cat.hint) {
+        const matches = cat.hint.match(/\d+/g);
+        if (matches && matches.length >= 2) {
+          defMin = matches[0];
+          defMax = matches[1];
+        }
+      }
+      acc[cat.id] = { min: defMin, max: defMax };
       return acc;
     }, {})
   );
 
-  const [activeTab, setActiveTab] = useState(activeCats[0]?.id || '1');
+  const handleValueChange = useCallback((catId, type, newValue) => {
+    setPrices((prev) => ({
+      ...prev,
+      [catId]: { ...prev[catId], [type]: newValue }
+    }));
+  }, []);
 
-  const updateBudget = (catId, index) => {
-    setBudgets((prev) => ({ ...prev, [catId]: index }));
+  const handleSkip = () => {
+    navigation.navigate('Onboarding3', { skippedPrices: true });
   };
 
-  const currentBudgetIndex = budgets[activeTab] ?? 2;
-  const currentBudget = BUDGET_RANGES[currentBudgetIndex];
+  const handleContinue = () => {
+    navigation.navigate('Onboarding3', { prices });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Step indicator */}
-        <View style={styles.stepIndicator}>
-          <View style={styles.stepDotDone} />
-          <View style={[styles.stepLine, styles.stepLineDone]} />
-          <View style={[styles.stepDot, styles.stepDotActive]} />
-          <View style={styles.stepLine} />
-          <View style={styles.stepDot} />
-        </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+          <View style={styles.content}>
+          <View style={styles.stepIndicator}>
+            <View style={styles.stepDotDone} />
+            <View style={[styles.stepLine, styles.stepLineDone]} />
+            <View style={[styles.stepDot, styles.stepDotActive]} />
+            <View style={styles.stepLine} />
+            <View style={styles.stepDot} />
+          </View>
 
-        <FadeInView delay={100}>
-          <Text style={styles.eyebrow}>BUDGET</Text>
-          <Text style={styles.title}>Set your{'\n'}budget</Text>
-          <Text style={styles.subtitle}>
-            Define spending ranges for each category
-          </Text>
-        </FadeInView>
-
-        {/* Category Tabs */}
-        <FadeInView delay={250}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.tabScroll}
-            contentContainerStyle={styles.tabContainer}
-          >
-            {activeCats.map((cat) => (
-              <TouchableOpacity
-                key={cat.id}
-                style={[
-                  styles.tab,
-                  activeTab === cat.id && styles.tabActive,
-                ]}
-                onPress={() => setActiveTab(cat.id)}
-              >
-                <Text style={styles.tabIcon}>{cat.icon}</Text>
-                <Text
-                  style={[
-                    styles.tabText,
-                    activeTab === cat.id && styles.tabTextActive,
-                  ]}
-                >
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </FadeInView>
-
-        {/* Budget Display */}
-        <FadeInView delay={400} style={styles.budgetSection}>
-          <View style={styles.budgetDisplay}>
-            <Text style={styles.budgetValue}>{currentBudget?.label}</Text>
-            <Text style={styles.budgetFor}>
-              for {activeCats.find((c) => c.id === activeTab)?.name}
+          <FadeInView delay={100} style={styles.header}>
+            <Text style={styles.title}>Set your price preferences</Text>
+            <Text style={styles.subtitle}>
+              Choose a comfortable range for each category
             </Text>
+          </FadeInView>
+
+          <View style={styles.listSection}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContainer}
+              keyboardShouldPersistTaps="handled"
+            >
+              {activeCats.map((cat, idx) => (
+                <CategoryPriceRow
+                  key={cat.id}
+                  category={cat}
+                  value={prices[cat.id]}
+                  onValueChange={handleValueChange}
+                  index={idx}
+                />
+              ))}
+            </ScrollView>
           </View>
 
-          {/* Budget options */}
-          <View style={styles.optionsList}>
-            {BUDGET_RANGES.map((range, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[
-                  styles.optionRow,
-                  currentBudgetIndex === i && styles.optionRowActive,
-                ]}
-                onPress={() => updateBudget(activeTab, i)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.optionLeft}>
-                  <View
-                    style={[
-                      styles.radioOuter,
-                      currentBudgetIndex === i && styles.radioOuterActive,
-                    ]}
-                  >
-                    {currentBudgetIndex === i && (
-                      <View style={styles.radioInner} />
-                    )}
-                  </View>
-                  <Text
-                    style={[
-                      styles.optionText,
-                      currentBudgetIndex === i && styles.optionTextActive,
-                    ]}
-                  >
-                    {range.label}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </FadeInView>
-
-        <FadeInView delay={600} style={styles.footer}>
-          <Button
-            title="Continue"
-            onPress={() => navigation.navigate('Onboarding3')}
-          />
-        </FadeInView>
-      </View>
+          <FadeInView delay={600} style={styles.footer}>
+            <Button title="Continue" onPress={handleContinue} />
+            
+            <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+              <Text style={styles.skipBtnText}>Skip for now</Text>
+            </TouchableOpacity>
+          </FadeInView>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
@@ -146,7 +183,7 @@ const Onboarding2 = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F5F5F7',
   },
   content: {
     flex: 1,
@@ -159,161 +196,92 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 40,
   },
-  stepDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.border,
-  },
-  stepDotDone: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.success,
-  },
-  stepDotActive: {
-    backgroundColor: COLORS.text,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  stepLine: {
-    width: 32,
-    height: 1,
-    backgroundColor: COLORS.border,
-    marginHorizontal: 8,
-  },
-  stepLineDone: {
-    backgroundColor: COLORS.success,
-  },
-  eyebrow: {
-    fontSize: SIZES.fontMicro,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 2,
-    marginBottom: 12,
+  stepDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.border },
+  stepDotDone: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.text },
+  stepDotActive: { backgroundColor: COLORS.text, width: 10, height: 10, borderRadius: 5 },
+  stepLine: { width: 32, height: 1, backgroundColor: COLORS.border, marginHorizontal: 8 },
+  stepLineDone: { backgroundColor: COLORS.text },
+
+  header: {
+    marginBottom: 20,
   },
   title: {
-    fontSize: SIZES.fontLarge,
-    fontWeight: '200',
-    color: COLORS.text,
-    marginBottom: 12,
-    letterSpacing: -0.3,
-    lineHeight: 40,
+    fontSize: 32,
+    fontWeight: '300',
+    color: '#1C1C1E',
+    marginBottom: 10,
+    letterSpacing: 0.3,
   },
   subtitle: {
-    fontSize: SIZES.fontRegular,
-    color: COLORS.textSecondary,
+    fontSize: 16,
+    color: '#8E8E93',
     fontWeight: '400',
     lineHeight: 24,
-    marginBottom: 24,
   },
-  tabScroll: {
-    marginBottom: 32,
-    flexGrow: 0,
-  },
-  tabContainer: {
-    gap: 10,
-  },
-  tab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: SIZES.radiusFull,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
-  },
-  tabActive: {
-    backgroundColor: COLORS.text,
-    borderColor: COLORS.text,
-  },
-  tabIcon: {
-    fontSize: 16,
-    marginRight: 6,
-  },
-  tabText: {
-    fontSize: SIZES.fontSmall,
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  tabTextActive: {
-    color: COLORS.white,
-  },
-  budgetSection: {
+
+  listSection: {
     flex: 1,
   },
-  budgetDisplay: {
-    alignItems: 'center',
-    marginBottom: 36,
+  listContainer: {
+    gap: 16,
+    paddingBottom: 24,
   },
-  budgetValue: {
-    fontSize: 36,
-    fontWeight: '200',
-    color: COLORS.text,
+
+  rowCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14, // Rounded (10-12)
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 10,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
+  },
+  categoryInfo: {
+    marginBottom: 16,
+  },
+  categoryName: {
+    fontSize: 19,
+    fontWeight: '500',
+    color: '#1C1C1E',
     marginBottom: 4,
-    letterSpacing: -0.5,
   },
-  budgetFor: {
-    fontSize: SIZES.fontSmall,
-    color: COLORS.textSecondary,
+  categoryHint: {
+    fontSize: 14,
+    color: '#B0B0B5',
     fontWeight: '400',
   },
-  optionsList: {
+
+  rangeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: SIZES.radius,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-  },
-  optionRowActive: {
-    borderColor: COLORS.text,
-    backgroundColor: COLORS.white,
-  },
-  optionLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: COLORS.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  radioOuterActive: {
-    borderColor: COLORS.text,
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.text,
-  },
-  optionText: {
-    fontSize: SIZES.fontRegular,
-    color: COLORS.textSecondary,
+  toText: {
+    fontSize: 14,
+    color: '#A1A1A6',
     fontWeight: '400',
+    marginHorizontal: 8,
   },
-  optionTextActive: {
-    color: COLORS.text,
-    fontWeight: '600',
-  },
+
   footer: {
-    paddingBottom: 24,
+    paddingBottom: 16,
     paddingTop: 8,
+    alignItems: 'center',
+    width: '100%',
+  },
+  skipBtn: {
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+  },
+  skipBtnText: {
+    fontSize: 15,
+    color: '#A1A1A6',
+    fontWeight: '500',
   },
 });
 

@@ -8,6 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { COLORS, SIZES } from '../constants/colors';
 import InputField from '../components/InputField';
@@ -37,8 +39,8 @@ const RegisterStep3 = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -143,7 +145,7 @@ const RegisterStep3 = ({ navigation }) => {
             <FadeInView delay={400} style={styles.footer}>
               <Button
                 title="Complete Registration"
-                onPress={() => navigation.navigate('Onboarding1')}
+                onPress={() => navigation.navigate('HomeHub')}
               />
             </FadeInView>
           </View>
