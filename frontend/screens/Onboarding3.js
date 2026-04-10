@@ -27,15 +27,14 @@ const THEMES = [
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - SIZES.padding * 2 - 16) / 2;
 
-const Onboarding3 = ({ navigation }) => {
+const Onboarding3 = ({ navigation, route }) => {
+  const selectedCategoryNames = route?.params?.selectedCategoryNames || [];
+  const category_budget = route?.params?.category_budget || {};
+
   const [selectedTheme, setSelectedTheme] = useState(null);
 
   const toggleTheme = (id) => {
-    if (selectedTheme === id) {
-      setSelectedTheme(null);
-    } else {
-      setSelectedTheme(id);
-    }
+    setSelectedTheme(prev => (prev === id ? null : id));
   };
 
   return (
@@ -108,7 +107,15 @@ const Onboarding3 = ({ navigation }) => {
         <FadeInView delay={500} style={styles.footer}>
           <Button
             title="Curate My Registry"
-            onPress={() => navigation.navigate('IntentInput')}
+            onPress={() => {
+              const themeObj = THEMES.find(t => t.id === selectedTheme);
+              const themeName = themeObj ? themeObj.name.toLowerCase() : 'modern';
+              navigation.navigate('IntentInput', {
+                selectedCategoryNames,
+                category_budget,
+                theme: themeName,
+              });
+            }}
             disabled={!selectedTheme}
           />
         </FadeInView>

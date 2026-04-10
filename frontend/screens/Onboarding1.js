@@ -108,12 +108,15 @@ const Onboarding1 = ({ navigation }) => {
         <FadeInView delay={500} style={styles.footer}>
           <Button
             title="Continue"
-            onPress={() =>
+            onPress={() => {
+              const selectedObjs = LOCAL_CATEGORIES.filter(c => selected.includes(c.id));
+              const selectedNames = selectedObjs.map(c => c.name);
               navigation.navigate('Onboarding2', {
                 selectedCategories: selected,
-                selectedCategoryObjects: LOCAL_CATEGORIES.filter(c => selected.includes(c.id)),
-              })
-            }
+                selectedCategoryObjects: selectedObjs,
+                selectedCategoryNames: selectedNames,
+              });
+            }}
             disabled={selected.length === 0}
           />
         </FadeInView>

@@ -8,14 +8,16 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TouchableWithoutFeedback,
-  Keyboard,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { COLORS, SIZES } from '../constants/colors';
 import InputField from '../components/InputField';
 import Button from '../components/Button';
 import ProgressBar from '../components/ProgressBar';
 import FadeInView from '../components/FadeInView';
+
+const BASE_URL = 'http://127.0.0.1:5000';
 
 const US_STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -25,13 +27,50 @@ const US_STATES = [
   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY',
 ];
 
-const RegisterStep3 = ({ navigation }) => {
-  const [street, setStreet] = useState('');
-  const [aptSuite, setAptSuite] = useState('');
-  const [city, setCity] = useState('');
-  const [state, setState] = useState('');
-  const [zip, setZip] = useState('');
+const RegisterStep3 = ({ navigation, route }) => {
+  // IDs forwarded from previous steps
+  const user_id     = route?.params?.user_id;
+  const registry_id = route?.params?.registry_id;
+
+  const [name,       setName]       = useState('');
+  const [street,     setStreet]     = useState('');
+  const [aptSuite,   setAptSuite]   = useState('');
+  const [city,       setCity]       = useState('');
+  const [state,      setState]      = useState('');
+  const [zip,        setZip]        = useState('');
   const [showStates, setShowStates] = useState(false);
+  const [loading,    setLoading]    = useState(false);
+
+  const handleComplete = async () => {
+    if (!street.trim() || !city.trim()) {
+      Alert.alert('Missing field', 'Please enter at least your street and city.');
+      return;
+    }
+
+    const parts = [street.trim()];
+    if (aptSuite.trim()) parts.push(aptSuite.trim());
+    parts.push(`${city.trim()}${state ? ', ' + state : ''}${zip ? ' ' + zip.trim() : ''}`);
+    const fullAddress = parts.join(', ');
+
+    setLoading(true);
+    try {
+      await fetch(`${BASE_URL}/register-user`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          user_id,
+          name:    name.trim(),
+          address: fullAddress,
+        }),
+      });
+    } catch (err) {
+      console.warn('Address save failed (offline):', err.message);
+    }
+
+    // Always navigate to HomeHub
+    setLoading(false);
+    navigation.navigate('HomeHub', { user_id, registry_id });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -39,8 +78,8 @@ const RegisterStep3 = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -63,6 +102,12 @@ const RegisterStep3 = ({ navigation }) => {
             </FadeInView>
 
             <FadeInView delay={250} style={styles.form}>
+              <InputField
+                label="Full Name"
+                placeholder="Jane Smith"
+                value={name}
+                onChangeText={setName}
+              />
               <InputField
                 label="Street Address"
                 placeholder="123 Main Street"
@@ -143,10 +188,11 @@ const RegisterStep3 = ({ navigation }) => {
             </FadeInView>
 
             <FadeInView delay={400} style={styles.footer}>
-              <Button
-                title="Complete Registration"
-                onPress={() => navigation.navigate('HomeHub')}
-              />
+              {loading ? (
+                <ActivityIndicator size="large" color={COLORS.text} style={{ marginBottom: 20 }} />
+              ) : (
+                <Button title="Complete Registration" onPress={handleComplete} />
+              )}
             </FadeInView>
           </View>
         </ScrollView>

@@ -18,8 +18,13 @@ import Button from '../components/Button';
 import FadeInView from '../components/FadeInView';
 import InputField from '../components/InputField';
 
-const IntentInputScreen = ({ navigation }) => {
+const IntentInputScreen = ({ navigation, route }) => {
   const [intentText, setIntentText] = useState('');
+
+  // Params forwarded from Onboarding3
+  const selectedCategoryNames = route?.params?.selectedCategoryNames || [];
+  const category_budget       = route?.params?.category_budget       || {};
+  const theme                 = route?.params?.theme                 || 'modern';
 
   // Screen-level fade in
   const screenFade = useRef(new Animated.Value(0)).current;
@@ -35,11 +40,19 @@ const IntentInputScreen = ({ navigation }) => {
     }).start();
   }, []);
 
-
+  // Build the full JSON payload and navigate to LoadingScreen
+  const buildPayloadAndNavigate = (extra) => {
+    const payload = {
+      category:        selectedCategoryNames,
+      category_budget: category_budget,
+      theme:           theme,
+      extra:           extra,
+    };
+    navigation.navigate('LoadingScreen', { payload });
+  };
 
   const handleRefine = () => {
-    // Pass the intent text to the loading screen (mock — no backend)
-    navigation.navigate('LoadingScreen', { intentText });
+    buildPayloadAndNavigate(intentText.trim());
   };
 
   const handleSkip = () => {
@@ -56,7 +69,7 @@ const IntentInputScreen = ({ navigation }) => {
         useNativeDriver: true,
       }),
     ]).start(() => {
-      navigation.navigate('LoadingScreen');
+      buildPayloadAndNavigate('');
     });
   };
 

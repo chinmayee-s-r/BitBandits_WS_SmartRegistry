@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { COLORS, SIZES, SHADOWS } from '../constants/colors';
 import { EVENT_TYPES } from '../constants/mockData';
@@ -14,12 +16,64 @@ import Button from '../components/Button';
 import ProgressBar from '../components/ProgressBar';
 import FadeInView from '../components/FadeInView';
 
-const RegisterStep2 = ({ navigation }) => {
-  const [eventType, setEventType] = useState(null);
+const BASE_URL = 'http://127.0.0.1:5000';
+
+// Map abbreviated month name → number string for ISO date
+const MONTH_MAP = {
+  Jan:'01', Feb:'02', Mar:'03', Apr:'04', May:'05', Jun:'06',
+  Jul:'07', Aug:'08', Sep:'09', Oct:'10', Nov:'11', Dec:'12',
+};
+
+const RegisterStep2 = ({ navigation, route }) => {
+  // user_id passed from RegisterStep1 after successful user creation
+  const user_id = route?.params?.user_id;
+
+  const [eventType,       setEventType]       = useState(null);
   const [showEventPicker, setShowEventPicker] = useState(false);
-  const [eventMonth, setEventMonth] = useState('');
-  const [eventDay, setEventDay] = useState('');
-  const [eventYear, setEventYear] = useState('');
+  const [eventMonth,      setEventMonth]      = useState('');
+  const [eventDay,        setEventDay]        = useState('');
+  const [eventYear,       setEventYear]       = useState('');
+  const [loading,         setLoading]         = useState(false);
+
+  const handleContinue = async () => {
+    setLoading(true);
+    let registry_id = null;
+
+    try {
+      let event_date = null;
+      if (eventMonth && eventDay && eventYear) {
+        const mm = MONTH_MAP[eventMonth] || '01';
+        const dd = eventDay.padStart(2, '0');
+        event_date = `${eventYear}-${mm}-${dd}`;
+      }
+
+      const res = await fetch(`${BASE_URL}/create-registry`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id,
+          name:       eventType
+            ? `${EVENT_TYPES.find(e => e.value === eventType)?.label || 'My'} Registry`
+            : 'My Registry',
+          occasion:   eventType   || '',
+          event_date: event_date,
+          is_public:  true,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        registry_id = data.registry_id;
+      } else {
+        console.warn('Create-registry error:', data.error);
+      }
+    } catch (err) {
+      console.warn('Backend unreachable, proceeding offline:', err.message);
+    }
+
+    if (!registry_id) registry_id = `local_${Date.now()}`;
+    setLoading(false);
+    navigation.navigate('RegisterStep3', { user_id, registry_id });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -206,10 +260,11 @@ const RegisterStep2 = ({ navigation }) => {
           </FadeInView>
 
           <FadeInView delay={400} style={styles.footer}>
-            <Button
-              title="Continue"
-              onPress={() => navigation.navigate('RegisterStep3')}
-            />
+            {loading ? (
+              <ActivityIndicator size="large" color={COLORS.text} style={{ marginBottom: 20 }} />
+            ) : (
+              <Button title="Continue" onPress={handleContinue} />
+            )}
           </FadeInView>
         </View>
       </ScrollView>

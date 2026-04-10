@@ -8,8 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TouchableWithoutFeedback,
-  Keyboard,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { COLORS, SIZES } from '../constants/colors';
 import InputField from '../components/InputField';
@@ -17,10 +17,57 @@ import Button from '../components/Button';
 import ProgressBar from '../components/ProgressBar';
 import FadeInView from '../components/FadeInView';
 
+const BASE_URL = 'http://127.0.0.1:5000';
+
 const RegisterStep1 = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+  const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone,    setPhone]    = useState('');
+  const [loading,  setLoading]  = useState(false);
+
+  const handleContinue = async () => {
+    if (!email.trim()) {
+      Alert.alert('Missing field', 'Please enter your email address.');
+      return;
+    }
+    if (!password.trim()) {
+      Alert.alert('Missing field', 'Please create a password.');
+      return;
+    }
+
+    setLoading(true);
+    let user_id = null;
+
+    try {
+      const res  = await fetch(`${BASE_URL}/register-user`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          email: email.trim(),
+          phone: phone.trim(),
+          password: password,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        user_id = data.user_id;
+      } else {
+        console.warn('Register-user error:', data.error);
+      }
+    } catch (err) {
+      // Backend is not running — continue with a local temp ID
+      console.warn('Backend unreachable, proceeding offline:', err.message);
+    }
+
+    // Always navigate forward; backend will be synced from Step3
+    if (!user_id) user_id = `local_${Date.now()}`;
+    setLoading(false);
+    navigation.navigate('RegisterStep2', {
+      user_id,
+      email: email.trim(),
+      phone: phone.trim(),
+    });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -28,8 +75,8 @@ const RegisterStep1 = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -58,6 +105,7 @@ const RegisterStep1 = ({ navigation }) => {
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
+                autoCapitalize="none"
               />
               <InputField
                 label="Password"
@@ -76,10 +124,11 @@ const RegisterStep1 = ({ navigation }) => {
             </FadeInView>
 
             <FadeInView delay={400} style={styles.footer}>
-              <Button
-                title="Continue"
-                onPress={() => navigation.navigate('RegisterStep2')}
-              />
+              {loading ? (
+                <ActivityIndicator size="large" color={COLORS.text} style={{ marginBottom: 20 }} />
+              ) : (
+                <Button title="Continue" onPress={handleContinue} />
+              )}
               <TouchableOpacity
                 style={styles.cancelBtn}
                 onPress={() => navigation.goBack()}

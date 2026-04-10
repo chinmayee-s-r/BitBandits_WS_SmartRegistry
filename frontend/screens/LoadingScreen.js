@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Animated, Easing, Alert } from 'react-native';
 import { COLORS, SIZES } from '../constants/colors';
 import { LOADING_MESSAGES } from '../constants/mockData';
 
@@ -62,10 +62,16 @@ const AnimatedDots = () => {
   );
 };
 
-const LoadingScreen = ({ navigation }) => {
+// ─── Change this to your machine's local IP when testing on a physical device ───
+const BASE_URL = 'http://127.0.0.1:5000';
+
+const LoadingScreen = ({ navigation, route }) => {
   const [messageIndex, setMessageIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const messageFade = useRef(new Animated.Value(0)).current;
+
+  // Payload assembled by IntentInputScreen
+  const payload = route?.params?.payload || null;
 
   useEffect(() => {
     // Initial fade in
@@ -101,14 +107,47 @@ const LoadingScreen = ({ navigation }) => {
       });
     }, 2000);
 
-    // Navigate after loading
-    const timer = setTimeout(() => {
-      navigation.replace('RegistryScreen');
-    }, 5000);
+    // ── Call the backend ──────────────────────────────────────────────
+    const callBackend = async () => {
+      try {
+        if (!payload) {
+          throw new Error('No payload provided. Please complete the onboarding steps.');
+        }
+
+        console.log('📦 Sending payload:', JSON.stringify(payload, null, 2));
+
+        const response = await fetch(`${BASE_URL}/generate-registry`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error || `Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const items = data.items || [];
+
+        clearInterval(interval);
+        navigation.replace('RegistryScreen', { items, payload });
+
+      } catch (err) {
+        console.error('❌ Registry generation failed:', err.message);
+        clearInterval(interval);
+        Alert.alert(
+          'Something went wrong',
+          err.message || 'Could not generate registry. Please try again.',
+          [{ text: 'Go Back', onPress: () => navigation.goBack() }]
+        );
+      }
+    };
+
+    callBackend();
 
     return () => {
       clearInterval(interval);
-      clearTimeout(timer);
     };
   }, []);
 

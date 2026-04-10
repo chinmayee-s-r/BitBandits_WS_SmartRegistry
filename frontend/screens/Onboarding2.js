@@ -92,13 +92,17 @@ const CategoryPriceRow = ({ category, value, onValueChange, index }) => {
 };
 
 const Onboarding2 = ({ navigation, route }) => {
-  // If no params passed via dev testing, fallback slightly
+  // Category IDs selected in Onboarding1
   const selectedCategories = route?.params?.selectedCategories || ['1', '4', '7'];
+  // Category names (e.g. ["Kitchen", "Bedroom"]) – used as the API payload keys
+  const selectedCategoryNames = route?.params?.selectedCategoryNames ||
+    CATEGORIES.filter(c => selectedCategories.includes(c.id)).map(c => c.name);
+
   const activeCats = CATEGORIES.filter((c) => selectedCategories.includes(c.id));
 
+  // prices is keyed by category NAME for direct use in API payload
   const [prices, setPrices] = useState(() =>
     activeCats.reduce((acc, cat) => {
-      // Parse the hint array natively for default placeholder values
       let defMin = '50', defMax = '300';
       if (cat.hint) {
         const matches = cat.hint.match(/\d+/g);
@@ -107,24 +111,41 @@ const Onboarding2 = ({ navigation, route }) => {
           defMax = matches[1];
         }
       }
-      acc[cat.id] = { min: defMin, max: defMax };
+      acc[cat.name] = { min: defMin, max: defMax };
       return acc;
     }, {})
   );
 
   const handleValueChange = useCallback((catId, type, newValue) => {
+    // Find the category name from the ID
+    const cat = CATEGORIES.find(c => c.id === catId);
+    if (!cat) return;
     setPrices((prev) => ({
       ...prev,
-      [catId]: { ...prev[catId], [type]: newValue }
+      [cat.name]: { ...prev[cat.name], [type]: newValue }
     }));
   }, []);
 
   const handleSkip = () => {
-    navigation.navigate('Onboarding3', { skippedPrices: true });
+    navigation.navigate('Onboarding3', {
+      selectedCategoryNames,
+      category_budget: {},
+    });
   };
 
   const handleContinue = () => {
-    navigation.navigate('Onboarding3', { prices });
+    // Convert string values to numbers
+    const category_budget = {};
+    Object.entries(prices).forEach(([name, range]) => {
+      category_budget[name] = {
+        min: parseInt(range.min, 10) || 0,
+        max: parseInt(range.max, 10) || 0,
+      };
+    });
+    navigation.navigate('Onboarding3', {
+      selectedCategoryNames,
+      category_budget,
+    });
   };
 
   return (
@@ -133,7 +154,7 @@ const Onboarding2 = ({ navigation, route }) => {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-          <View style={styles.content}>
+        <View style={styles.content}>
           <View style={styles.stepIndicator}>
             <View style={styles.stepDotDone} />
             <View style={[styles.stepLine, styles.stepLineDone]} />
@@ -159,7 +180,7 @@ const Onboarding2 = ({ navigation, route }) => {
                 <CategoryPriceRow
                   key={cat.id}
                   category={cat}
-                  value={prices[cat.id]}
+                  value={prices[cat.name]}
                   onValueChange={handleValueChange}
                   index={idx}
                 />
@@ -169,7 +190,7 @@ const Onboarding2 = ({ navigation, route }) => {
 
           <FadeInView delay={600} style={styles.footer}>
             <Button title="Continue" onPress={handleContinue} />
-            
+
             <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
               <Text style={styles.skipBtnText}>Skip for now</Text>
             </TouchableOpacity>

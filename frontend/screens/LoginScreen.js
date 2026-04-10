@@ -16,9 +16,47 @@ import InputField from '../components/InputField';
 import Button from '../components/Button';
 import FadeInView from '../components/FadeInView';
 
+const BASE_URL = 'http://127.0.0.1:5000';
+
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleLogin = async () => {
+    if (!email.trim()) {
+      setErrorMsg('Please enter your email address');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+
+    try {
+      const res = await fetch(`${BASE_URL}/login-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'User not found in our system');
+      }
+
+      // Success! Pass user_id mapping downwards ideally
+      navigation.navigate('HomeHub', { user_id: data.user_id });
+    } catch (err) {
+      setErrorMsg(err.message || 'Error communicating with server');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -53,7 +91,10 @@ const LoginScreen = ({ navigation }) => {
               label="Email"
               placeholder="your@email.com"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(text) => {
+                setEmail(text);
+                setErrorMsg(''); // Clear error on typing
+              }}
               keyboardType="email-address"
             />
             <InputField
@@ -66,16 +107,25 @@ const LoginScreen = ({ navigation }) => {
             <TouchableOpacity style={styles.forgotPass}>
               <Text style={styles.forgotText}>Forgot password?</Text>
             </TouchableOpacity>
+
+            {errorMsg ? (
+              <Text style={styles.errorText}>{errorMsg}</Text>
+            ) : null}
           </FadeInView>
 
           <FadeInView delay={400} style={styles.footer}>
-            <Button
-              title="Sign In"
-              onPress={() => navigation.navigate('HomeHub')}
-            />
+            {loading ? (
+              <ActivityIndicator size="large" color={COLORS.text} style={{ marginVertical: 10 }} />
+            ) : (
+              <Button
+                title="Sign In"
+                onPress={handleLogin}
+              />
+            )}
             <TouchableOpacity
               style={styles.cancelBtn}
               onPress={() => navigation.goBack()}
+              disabled={loading}
             >
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
@@ -151,6 +201,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: SIZES.fontSmall,
     fontWeight: '500',
+  },
+  errorText: {
+    color: 'red',
+    marginTop: 12,
+    fontSize: SIZES.fontSmall,
+    textAlign: 'center',
   },
 });
 
