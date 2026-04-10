@@ -1,11 +1,13 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Image, Platform, Modal, KeyboardAvoidingView } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { COLORS, SIZES, SHADOWS } from '../constants/colors';
 import { AI_TAGS } from '../constants/mockData';
 
 const AIPopup = ({ product, onClose }) => {
   const slideAnim = useRef(new Animated.Value(300)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
+  const navigation = useNavigation();
 
   const nd = Platform.OS !== 'web';
 
@@ -123,9 +125,15 @@ const AIPopup = ({ product, onClose }) => {
             )}
 
             {/* Action buttons */}
-            <TouchableOpacity style={styles.primaryAction}>
+            <TouchableOpacity 
+              style={styles.primaryAction}
+              onPress={() => {
+                onClose();
+                navigation.navigate('ProductDetail', { product });
+              }}
+            >
               <Text style={styles.primaryActionText}>
-                {product.status === 'purchased' ? 'View Alternatives' : 'Add to Registry'}
+                {product.status === 'purchased' ? 'View Alternatives' : 'View Full Details'}
               </Text>
             </TouchableOpacity>
 

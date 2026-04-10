@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Animated, Platform, TouchableOpacity } from 'react-native';
 import { COLORS, SIZES } from '../constants/colors';
 import Button from '../components/Button';
 
@@ -94,6 +94,15 @@ const LandingScreen = ({ navigation }) => {
             type="secondary"
             onPress={() => navigation.navigate('Login')}
           />
+          
+          <TouchableOpacity
+            style={{ marginTop: 24, alignItems: 'center' }}
+            onPress={() => navigation.navigate('FindRegistry')}
+          >
+            <Text style={{ fontSize: SIZES.fontSmall, color: COLORS.textSecondary, fontWeight: '500', textDecorationLine: 'underline' }}>
+              Find a Registry (Guest)
+            </Text>
+          </TouchableOpacity>
         </Animated.View>
       </View>
     </SafeAreaView>

@@ -16,10 +16,12 @@ import { PRODUCTS } from '../constants/mockData';
 import ProductCard from '../components/ProductCard';
 import AIPopup from '../components/AIPopup';
 import FadeInView from '../components/FadeInView';
+import { useNavigation } from '@react-navigation/native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 const RegistryScreen = () => {
+  const navigation = useNavigation();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeFilter, setActiveFilter] = useState('All');
   const headerFade = useRef(new Animated.Value(0)).current;
@@ -68,8 +70,11 @@ const RegistryScreen = () => {
               {totalItems} items · {purchasedItems} gifted
             </Text>
           </View>
-          <TouchableOpacity style={styles.manageBtn}>
-            <Text style={styles.manageBtnText}>Share</Text>
+          <TouchableOpacity 
+            style={styles.manageBtn}
+            onPress={() => navigation.navigate('ManageRegistry')}
+          >
+            <Text style={styles.manageBtnText}>Manage</Text>
           </TouchableOpacity>
         </View>
 

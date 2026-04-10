@@ -15,6 +15,12 @@ import LoadingScreen from '../screens/LoadingScreen';
 import RegistryScreen from '../screens/RegistryScreen';
 import HomeHubScreen from '../screens/HomeHubScreen';
 import SearchScreen from '../screens/SearchScreen';
+import FindRegistryScreen from '../screens/FindRegistryScreen';
+import ProductDetailScreen from '../screens/ProductDetailScreen';
+import ManageRegistryScreen from '../screens/ManageRegistryScreen';
+import GuestRegistryScreen from '../screens/GuestRegistryScreen';
+import PublishRegistryScreen from '../screens/PublishRegistryScreen';
+import TrackingDashboardScreen from '../screens/TrackingDashboardScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -63,6 +69,27 @@ const AppNavigator = () => {
           component={RegistryScreen}
           options={{ animation: 'fade', gestureEnabled: false }}
         />
+        
+        {/* Product Detail */}
+        <Stack.Screen
+          name="ProductDetail"
+          component={ProductDetailScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+
+        {/* Manage Registry */}
+        <Stack.Screen
+          name="ManageRegistry"
+          component={ManageRegistryScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
+
+        {/* Guest Registry View */}
+        <Stack.Screen
+          name="GuestRegistry"
+          component={GuestRegistryScreen}
+          options={{ animation: 'slide_from_right' }}
+        />
 
         {/* Home Hub & Search */}
         <Stack.Screen 
@@ -74,6 +101,21 @@ const AppNavigator = () => {
           name="SearchScreen" 
           component={SearchScreen} 
           options={{ animation: 'fade_from_bottom' }}
+        />
+        <Stack.Screen 
+          name="FindRegistry" 
+          component={FindRegistryScreen} 
+          options={{ animation: 'fade_from_bottom' }}
+        />
+        <Stack.Screen 
+          name="PublishRegistry" 
+          component={PublishRegistryScreen} 
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen 
+          name="TrackingDashboard" 
+          component={TrackingDashboardScreen} 
+          options={{ animation: 'slide_from_right' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -91,7 +91,7 @@ const HomeHubScreen = ({ navigation }) => {
         <Card
           title="Find a registry"
           description="Search and purchase gifts for someone"
-          onPress={() => navigation.navigate('SearchScreen')}
+          onPress={() => navigation.navigate('FindRegistry')}
           animValue={slideAnim3}
           style={styles.guestCard}
         />
