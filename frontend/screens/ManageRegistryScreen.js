@@ -44,6 +44,36 @@ const ManageRegistryScreen = () => {
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
+  const [loading, setLoading] = React.useState(false);
+
+  const handlePublish = async () => {
+    setLoading(true);
+    
+    // Extract product IDs
+    const productIds = registryItems.map(item => item.id);
+
+    try {
+      const res = await fetch(`http://127.0.0.1:5000/publish-registry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_ids: productIds }),
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+         alert('Publish Error: ' + (data.error || 'Failed to publish registry.'));
+      } else {
+         // Optionally navigate to Publish Settings or directly to tracking
+         navigation.navigate('PublishRegistry');
+      }
+    } catch (err) {
+      alert('Network Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -62,8 +92,9 @@ const ManageRegistryScreen = () => {
           <Text style={styles.publishTitle}>Ready to share?</Text>
           <Text style={styles.publishSub}>Publish your registry to make it visible to guests.</Text>
           <Button 
-            title="Publish Registry" 
-            onPress={() => navigation.navigate('PublishRegistry')} 
+            title={loading ? "Publishing..." : "Publish Registry"} 
+            onPress={handlePublish} 
+            disabled={loading}
             style={{ marginBottom: 0, marginTop: 12 }}
           />
         </View>

@@ -93,7 +93,17 @@ const ProductCard = ({ product, onPress, index = 0 }) => {
             </Text>
             <View style={[styles.statusDot, { backgroundColor: getStatusColor() }]} />
           </View>
-          <Text style={styles.price}>${product.price}</Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>${product.price}</Text>
+            {product.rating > 0 && (
+              <View style={styles.ratingContainer}>
+                <Text style={styles.starIcon}>★</Text>
+                <Text style={styles.ratingText}>
+                  {product.rating} <Text style={styles.reviewsText}>({product.reviews || product.reviews_count || 0})</Text>
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </TouchableOpacity>
     </Animated.View>
@@ -157,11 +167,34 @@ const styles = StyleSheet.create({
     paddingRight: 8,
     letterSpacing: 0.1,
   },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   price: {
     fontSize: SIZES.fontRegular,
     fontWeight: '600',
     color: COLORS.text,
     letterSpacing: 0.2,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  starIcon: {
+    color: '#FFD700', // Gold color for star
+    fontSize: SIZES.fontSmall,
+    marginRight: 4,
+  },
+  ratingText: {
+    fontSize: SIZES.fontCaption,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  reviewsText: {
+    color: COLORS.textTertiary,
+    fontWeight: '400',
   },
   statusDot: {
     width: 8,

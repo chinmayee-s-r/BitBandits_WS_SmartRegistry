@@ -21,6 +21,7 @@ import ManageRegistryScreen from '../screens/ManageRegistryScreen';
 import GuestRegistryScreen from '../screens/GuestRegistryScreen';
 import PublishRegistryScreen from '../screens/PublishRegistryScreen';
 import TrackingDashboardScreen from '../screens/TrackingDashboardScreen';
+import MyRegistryDashboardScreen from '../screens/MyRegistryDashboardScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -115,6 +116,11 @@ const AppNavigator = () => {
         <Stack.Screen 
           name="TrackingDashboard" 
           component={TrackingDashboardScreen} 
+          options={{ animation: 'slide_from_right' }}
+        />
+        <Stack.Screen 
+          name="MyRegistryDashboard" 
+          component={MyRegistryDashboardScreen} 
           options={{ animation: 'slide_from_right' }}
         />
       </Stack.Navigator>

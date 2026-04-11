@@ -11,14 +11,47 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { COLORS, SIZES, SHADOWS } from '../constants/colors';
 import Button from '../components/Button';
+import { useRegistry } from '../context/RegistryContext';
+import { ActivityIndicator, Alert } from 'react-native';
+
+const BASE_URL = 'http://127.0.0.1:5000';
 
 const PublishRegistryScreen = () => {
   const navigation = useNavigation();
+  const { registryItems } = useRegistry();
   const [isPublic, setIsPublic] = useState(true);
+  const [loading, setLoading] = useState(false);
 
-  const handlePublish = () => {
-    // Navigate to TrackingDashboard
-    navigation.navigate('TrackingDashboard');
+  const handlePublish = async () => {
+    setLoading(true);
+    
+    // Extract product IDs
+    const productIds = registryItems.map(item => item.id);
+
+    try {
+      const res = await fetch(`${BASE_URL}/publish-registry`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product_ids: productIds,
+          // registry_id can be passed here if available, 
+          // but our backend securely grabs the latest one if omitted
+        }),
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+         Alert.alert('Publish Error', data.error || 'Failed to publish registry.');
+      } else {
+         // Navigate to TrackingDashboard upon success
+         navigation.navigate('TrackingDashboard');
+      }
+    } catch (err) {
+      Alert.alert('Network Error', err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -88,7 +121,11 @@ const PublishRegistryScreen = () => {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button title="Confirm & Publish" onPress={handlePublish} />
+        {loading ? (
+          <ActivityIndicator size="large" color={COLORS.text} style={{ marginVertical: 10 }} />
+        ) : (
+          <Button title="Confirm & Publish" onPress={handlePublish} />
+        )}
       </View>
     </SafeAreaView>
   );

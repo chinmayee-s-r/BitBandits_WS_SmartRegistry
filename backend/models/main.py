@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 import json
 import re
 import time
+from datetime import datetime, timedelta
 
 # =========================================================
 # INIT
@@ -398,6 +399,284 @@ def create_registry():
         print("CREATE-REGISTRY ERROR:", e)
         return jsonify({"error": str(e)}), 500
 
+
+# =========================================================
+# PUBLISH REGISTRY  →  registry_items table
+# Links selected product IDs to a registry ID
+# =========================================================
+@app.route("/publish-registry", methods=["POST"])
+def publish_registry():
+    try:
+        data = request.json or {}
+        print("PUBLISH-REGISTRY:", data)
+
+        registry_id = data.get("registry_id")
+        product_ids = data.get("product_ids", [])
+
+        if not product_ids:
+            return jsonify({"error": "No products to publish"}), 400
+
+        # Optional: if no registry_id is provided, try picking latest from registries
+        if not registry_id or str(registry_id).startswith("local_"):
+            # A fallback just to link them somewhere instead of erroring during demo
+            check = supabase.table("registries").select("registry_id").order("created_at", desc=True).limit(1).execute()
+            if check.data:
+                registry_id = check.data[0]["registry_id"]
+            else:
+                return jsonify({"error": "No registry found to publish to"}), 404
+
+        # Convert valid IDs to integers
+        numeric_pids = []
+        for pid in product_ids:
+            try:
+                numeric_pids.append(int(pid))
+            except ValueError:
+                pass
+                
+        if not numeric_pids:
+            return jsonify({"error": "No valid products to publish"}), 400
+
+        # Fetch product prices securely from DB to set the initial required_amount
+        price_query = supabase.table("products").select("product_id, price").in_("product_id", numeric_pids).execute()
+        price_map = {row["product_id"]: row["price"] for row in price_query.data}
+
+        # Insert each product into registry_items table
+        insert_payload = []
+        for pid in numeric_pids:
+            insert_payload.append({
+                "registry_id": registry_id,
+                "product_id": pid,
+                "status": "AVAILABLE",
+                "required_amount": price_map.get(pid, 0)
+            })
+
+        if insert_payload:
+            supabase.table("registry_items").insert(insert_payload).execute()
+
+        return jsonify({"success": True, "inserted_count": len(insert_payload)})
+
+    except Exception as e:
+        import traceback
+        print("PUBLISH-REGISTRY ERROR:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+# =========================================================
+# HELPER: Check and Release Expired Locks
+# =========================================================
+def release_expired_locks():
+    try:
+        now = datetime.utcnow().isoformat()
+        supabase.table("registry_items").update({
+            "status": "AVAILABLE",
+            "locked_by": None,
+            "lock_expires_at": None
+        }).lt("lock_expires_at", now).neq("status", "PURCHASED").execute()
+    except Exception as e:
+        print("Warning: Failed to release expired locks", e)
+
+# =========================================================
+# GET MY REGISTRY  →  registry_items + products
+# =========================================================
+@app.route("/my-registry", methods=["GET"])
+def get_my_registry():
+    release_expired_locks()
+    try:
+        registry_id = request.args.get("registry_id")
+        user_id = request.args.get("user_id")
+
+        if not registry_id:
+            if user_id and not str(user_id).startswith("local_"):
+                reg_check = supabase.table("registries").select("registry_id").eq("user_id", user_id).order("created_at", desc=True).limit(1).execute()
+            else:
+                # Fallback for prototype testing
+                reg_check = supabase.table("registries").select("registry_id").order("created_at", desc=True).limit(1).execute()
+
+            if not reg_check.data:
+                 return jsonify({"error": "No registry found", "items": []}), 404
+                 
+            registry_id = reg_check.data[0]["registry_id"]
+
+        # Join registry_items with products
+        items_req = supabase.table("registry_items").select("*, products(*)").eq("registry_id", registry_id).execute()
+
+        # Gather all UUIDs for name mapping
+        all_uuids = set()
+        for item in items_req.data:
+            bb = item.get("bought_by")
+            if bb:
+                all_uuids.update(str(uid) for uid in bb)
+            lb = item.get("locked_by")
+            if lb:
+                all_uuids.add(str(lb))
+        
+        uuid_to_name = {}
+        if all_uuids:
+            try:
+                users_req = supabase.table("users").select("user_id, name").in_("user_id", list(all_uuids)).execute()
+                for u in users_req.data:
+                    uuid_to_name[str(u["user_id"])] = u.get("name") or "Guest"
+            except Exception as e:
+                print("Error fetching user names:", e)
+
+        results = []
+        for item in items_req.data:
+            p = item.get("products", {})
+            
+            bb = item.get("bought_by") or []
+            bb_names = [uuid_to_name.get(str(uid), "Guest") for uid in bb]
+            
+            lb = item.get("locked_by")
+            lb_name = uuid_to_name.get(str(lb), "Anonymous Guest") if lb else None
+
+            results.append({
+                "registry_item_id": item.get("registry_item_id"),
+                "product_id": item.get("product_id"),
+                "status": item.get("status") or 'AVAILABLE',
+                "total_contribution": float(item.get("total_contribution") or 0),
+                "required_amount": float(item.get("required_amount") or p.get("price") or 0),
+                "bought_by_names": bb_names,
+                "locked_by": lb,
+                "locked_by_name": lb_name,
+                "name": p.get("name", "Unknown Product"),
+                "image": p.get("image_url") or p.get("image") or 'https://via.placeholder.com/150',
+                "price": float(p.get("price") or 0)
+            })
+
+        return jsonify({"registry_id": registry_id, "items": results})
+
+    except Exception as e:
+        import traceback
+        print("GET MY-REGISTRY ERROR:", e)
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+# =========================================================
+# LOCKING & PAYMENT ENDPOINTS (Guest Interactions)
+# =========================================================
+@app.route("/reserve/<int:item_id>", methods=["POST"])
+def reserve_item(item_id):
+    release_expired_locks()
+    data = request.json or {}
+    user_id = data.get("user_id")
+    try:
+        supabase.table("registry_items").update({
+            "status": "RESERVED",
+            "locked_by": user_id
+        }).eq("registry_item_id", item_id).neq("status", "PURCHASED").execute()
+        return jsonify({"message": "Item reserved"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/start-payment/<int:item_id>", methods=["POST"])
+def start_payment(item_id):
+    release_expired_locks()
+    data = request.json or {}
+    user_id = data.get("user_id")
+    try:
+        item = supabase.table("registry_items").select("status").eq("registry_item_id", item_id).single().execute()
+        if not item.data:
+            return jsonify({"error": "Item not found"}), 404
+        if item.data["status"] in ["PURCHASED", "RESERVED"]:
+            return jsonify({"error": "Item not available"}), 400
+            
+        expiry = (datetime.utcnow() + timedelta(minutes=5)).isoformat()
+        supabase.table("registry_items").update({
+            "status": "RESERVED",
+            "locked_by": user_id,
+            "lock_expires_at": expiry
+        }).eq("registry_item_id", item_id).execute()
+        return jsonify({"message": "Payment started"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/purchase/<int:item_id>", methods=["POST"])
+def purchase(item_id):
+    data = request.json or {}
+    user_id = data.get("user_id")
+    try:
+        item = supabase.table("registry_items").select("status", "locked_by", "bought_by").eq("registry_item_id", item_id).single().execute()
+        if not item.data:
+            return jsonify({"error": "Item not found"}), 404
+        if item.data["status"] != "RESERVED":
+            return jsonify({"error": "Payment not started"}), 400
+        if str(item.data["locked_by"]) != str(user_id):
+            return jsonify({"error": "Not your payment session"}), 403
+            
+        bought_by_array = item.data.get("bought_by") or []
+        if user_id and user_id not in bought_by_array:
+            bought_by_array.append(user_id)
+
+        supabase.table("registry_items").update({
+            "status": "PURCHASED",
+            "bought_by": bought_by_array,
+            "locked_by": None,
+            "lock_expires_at": None
+        }).eq("registry_item_id", item_id).execute()
+        return jsonify({"message": "Item purchased"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/contribute/<int:item_id>", methods=["POST"])
+def contribute(item_id):
+    data = request.json or {}
+    amount = float(data.get("amount", 0))
+    user_id = data.get("user_id")
+    try:
+        item = supabase.table("registry_items").select("total_contribution", "required_amount", "bought_by").eq("registry_item_id", item_id).single().execute()
+        if not item.data:
+            return jsonify({"error": "Item not found"}), 404
+
+        total = float(item.data.get("total_contribution") or 0) + amount
+        required = float(item.data["required_amount"])
+        
+        bought_by_array = item.data.get("bought_by") or []
+        if user_id and user_id not in bought_by_array:
+            bought_by_array.append(user_id)
+
+        update_payload = {
+            "total_contribution": total,
+            "bought_by": bought_by_array,
+            "status": "AVAILABLE",
+            "locked_by": None,
+            "lock_expires_at": None
+        }
+        
+        # Auto purchase if complete
+        if total >= required:
+            update_payload["status"] = "PURCHASED"
+
+        supabase.table("registry_items").update(update_payload).eq("registry_item_id", item_id).execute()
+        return jsonify({"total": total, "required": required, "completed": total >= required})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# =========================================================
+# GET ALL REGISTRIES (Search functionality)
+# =========================================================
+@app.route("/all-registries", methods=["GET"])
+def get_all_registries():
+    try:
+        req = supabase.table("registries").select("*").execute()
+        
+        results = []
+        for reg in req.data:
+            # Format event_date nicely if needed, or send as is
+            # For guest searches, mapping DB columns to frontend expected fields
+            results.append({
+                "id": str(reg.get("registry_id")),
+                "name": reg.get("name") or "Unnamed Registry",
+                "event": reg.get("occasion") or "Event",
+                "date": reg.get("event_date") or "TBD"
+            })
+            
+        return jsonify({"registries": results})
+        
+    except Exception as e:
+        print("GET ALL-REGISTRIES ERROR:", e)
+        return jsonify({"error": str(e)}), 500
 
 # =========================================================
 # ALL PRODUCTS (browsable inventory with filters)

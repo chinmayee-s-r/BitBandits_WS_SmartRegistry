@@ -16,16 +16,9 @@ import { COLORS, SIZES } from '../constants/colors';
 import FadeInView from '../components/FadeInView';
 import { useRegistry } from '../context/RegistryContext';
 
-const MOCK_REGISTRIES = [
-  { id: "REG123", name: "Ryan & Meera", event: "Wedding", date: "Dec 2026" },
-  { id: "REG456", name: "Kathani Sharma", event: "Housewarming", date: "Jan 2027" },
-  { id: "REG789", name: "Caroline & Elena", event: "Baby Shower", date: "Mar 2027" },
-  { id: "REG012", name: "Jeremy Gilbert", event: "Graduation", date: "May 2027" },
-];
-
 const RECENT_SEARCHES = [
-  "Ryan & Meera",
-  "REG456"
+  "Richa's Wedding",
+  "Housewarming"
 ];
 
 // Simple Search Icon Component (to keep it dependency-free without vector-icons if not installed)
@@ -38,16 +31,34 @@ const SearchIcon = () => (
 
 const { width } = Dimensions.get('window');
 
-const FindRegistryScreen = ({ navigation }) => {
+const FindRegistryScreen = ({ navigation, route }) => {
   const { setUserRole, setSelectedRegistry } = useRegistry();
+  const user_id = route?.params?.user_id || '';
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [registriesDB, setRegistriesDB] = useState([]);
   
   // Animation for focus state
   const focusAnim = useRef(new Animated.Value(0)).current;
 
   // Animation for list appearance
   const listAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Fetch live registries from backend
+    const loadRegistries = async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:5000/all-registries');
+        const data = await res.json();
+        if (data.registries) {
+          setRegistriesDB(data.registries);
+        }
+      } catch (err) {
+        console.error("Failed to fetch registries:", err);
+      }
+    };
+    loadRegistries();
+  }, []);
 
   useEffect(() => {
     Animated.timing(focusAnim, {
@@ -79,18 +90,18 @@ const FindRegistryScreen = ({ navigation }) => {
   const filteredSuggestions = useMemo(() => {
     if (!query.trim()) return [];
     const lowerQuery = query.toLowerCase();
-    return MOCK_REGISTRIES.filter(
+    return registriesDB.filter(
       (reg) =>
         reg.name.toLowerCase().includes(lowerQuery) ||
         reg.id.toLowerCase().includes(lowerQuery)
     );
-  }, [query]);
+  }, [query, registriesDB]);
 
   const handleSelectRegistry = (registryId) => {
     console.log("Selected Registry:", registryId);
     setUserRole('guest');
     setSelectedRegistry(registryId);
-    navigation.navigate('GuestRegistry');
+    navigation.navigate('GuestRegistry', { user_id });
   };
 
   const handleRecentSearch = (searchText) => {

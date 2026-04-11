@@ -7,37 +7,150 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert
+  Alert,
+  Modal,
+  TextInput
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS, SIZES, SHADOWS } from '../constants/colors';
 import { useRegistry } from '../context/RegistryContext';
 import Button from '../components/Button';
 
-const GuestRegistryScreen = () => {
+// Utility for creating a local guest UUID since they might be anonymous browsers
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    let r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+const GuestRegistryScreen = ({ route }) => {
   const navigation = useNavigation();
-  const { registryItems, updateItemStatus, incrementContributors } = useRegistry();
+  const { updateItemStatus, incrementContributors, selectedRegistry } = useRegistry();
+  const [dbItems, setDbItems] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  // Modal and transaction states
+  const passedUserId = route?.params?.user_id;
+  const [guestId] = React.useState(passedUserId || generateUUID());
+  const [modalVisible, setModalVisible] = React.useState(false);
+  const [selectedItem, setSelectedItem] = React.useState(null);
+  const [contribAmount, setContribAmount] = React.useState('');
+  const [isProcessing, setIsProcessing] = React.useState(false);
+
+  const fetchGuestRegistry = async () => {
+    try {
+      const res = await fetch(`http://127.0.0.1:5000/my-registry?registry_id=${selectedRegistry || ''}`);
+      const data = await res.json();
+      if (data.items) {
+        setDbItems(data.items);
+      }
+    } catch (err) {
+      console.error("Failed to load guest registry:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchGuestRegistry();
+  }, [selectedRegistry]);
 
   // Group items
   const groupedItems = useMemo(() => {
-    return registryItems.reduce((acc, item) => {
+    return dbItems.reduce((acc, item) => {
       const sec = item.section || 'Essentials';
       if (!acc[sec]) acc[sec] = [];
       acc[sec].push(item);
       return acc;
     }, {});
-  }, [registryItems]);
+  }, [dbItems]);
 
   const sections = ['Essentials', 'Nice to Have', 'Premium Picks'];
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'available': return COLORS.success;
-      case 'viewing': return COLORS.warning;
-      case 'reserved': return COLORS.accent;
-      case 'purchased': return COLORS.textTertiary;
-      default: return COLORS.success;
+      case 'AVAILABLE': return COLORS.success || '#34C759'; // Green
+      case 'RESERVED': return '#FF9500'; // Amber (Hard lock)
+      case 'PURCHASED': return COLORS.error || '#FF3B30'; // Red
+      default: return '#34C759';
     }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'AVAILABLE': return 'Available';
+      case 'RESERVED': return 'Payment Pending';
+      case 'PURCHASED': return 'Gifted';
+      default: return 'Available';
+    }
+  };
+
+  const handleBuyClick = async (item) => {
+    // Attempt Hard Lock `/start-payment`
+    try {
+      const lockRes = await fetch(`http://127.0.0.1:5000/start-payment/${item.registry_item_id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: guestId })
+      });
+      const lockData = await lockRes.json();
+      
+      if (!lockRes.ok) {
+        Alert.alert("Item Unavailable", lockData.error || "Someone else is currently purchasing this item.");
+        fetchGuestRegistry(); // refresh instantly
+        return;
+      }
+      
+      // Successfully locked
+      setSelectedItem(item);
+      setContribAmount('');
+      setModalVisible(true);
+    } catch (error) {
+       Alert.alert("Error", "Could not connect to server to lock item.");
+    }
+  };
+
+  const submitContribution = async () => {
+    if (!selectedItem) return;
+    const amountVal = parseFloat(contribAmount);
+    if (isNaN(amountVal) || amountVal <= 0) {
+      Alert.alert("Invalid Amount", "Please enter a valid amount to contribute.");
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      const payRes = await fetch(`http://127.0.0.1:5000/contribute/${selectedItem.registry_item_id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          user_id: guestId,
+          amount: amountVal
+        })
+      });
+
+      const result = await payRes.json();
+      if (!payRes.ok) {
+        Alert.alert("Failed", result.error || "An error occurred during payment.");
+      } else {
+        Alert.alert("Success!", result.completed ? "Item fully gifted!" : "Your contribution was added successfully!");
+        setModalVisible(false);
+        fetchGuestRegistry(); // Re-sync after success
+      }
+    } catch (error) {
+       Alert.alert("Error", "Network error processing payment.");
+    } finally {
+       setIsProcessing(false);
+    }
+  };
+
+  const cancelPurchase = () => {
+    setModalVisible(false);
+    // Optional: we don't necessarily have an explicit "release-payment" endpoint, 
+    // it will automatically expire after 5 mins via release_expired_locks on the next fetch,
+    // but ideally we'd ping the backend to release the hard lock immediately.
+    // The instructions note automatic expiry, so we'll just close modal.
   };
 
   const handleBuy = (item) => {
@@ -69,7 +182,7 @@ const GuestRegistryScreen = () => {
           <Text style={styles.bannerSub}>Help them build their dream setup by contributing or purchasing items below.</Text>
         </View>
 
-        {registryItems.length === 0 ? (
+        {dbItems.length === 0 && !loading ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>This registry is currently empty.</Text>
             <Text style={styles.emptySub}>Check back later!</Text>
@@ -84,21 +197,39 @@ const GuestRegistryScreen = () => {
                 <Text style={styles.sectionTitle}>{section}</Text>
                 
                 {items.map(item => {
-                  const isExpensive = item.price >= 200;
-                  const isPurchased = item.status === 'purchased';
-                  const isReserved = item.status === 'reserved';
+                  const isPurchased = item.status === 'PURCHASED';
+                  const isLocked = item.status === 'RESERVED';
+                  
+                  // Compute remaining safely
+                  const required = parseFloat(item.required_amount) || item.price;
+                  const contributed = parseFloat(item.total_contribution) || 0;
+                  const remaining = Math.max(0, required - contributed);
 
                   return (
-                    <View key={item.id} style={styles.itemCard}>
+                    <View key={item.registry_item_id || item.id} style={styles.itemCard}>
                       <Image source={{ uri: item.image }} style={styles.itemImage} />
                       
                       <View style={styles.itemInfo}>
                         <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-                        <Text style={styles.itemPrice}>${item.price} {item.contributors > 0 ? `• ${item.contributors} contributors` : ''}</Text>
+                        <Text style={styles.itemPrice}>
+                          ${item.price} {contributed > 0 ? `• $${contributed} raised` : ''}
+                        </Text>
+                        
+                        {item.bought_by_names && item.bought_by_names.length > 0 && (
+                          <Text style={styles.boughtByText}>
+                            Bought by: {item.bought_by_names.join(', ')}
+                          </Text>
+                        )}
+
+                        {isLocked && item.locked_by_name && (
+                          <Text style={styles.boughtByText}>
+                            Being viewed by: {item.locked_by_name}
+                          </Text>
+                        )}
                         
                         <View style={styles.statusBadge}>
                           <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-                          <Text style={styles.statusText}>{isPurchased ? 'Gifted' : (isReserved ? 'In cart' : 'Available')}</Text>
+                          <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
                         </View>
                       </View>
 
@@ -106,18 +237,18 @@ const GuestRegistryScreen = () => {
                       <View style={styles.actionContainer}>
                         {isPurchased ? (
                           <TouchableOpacity style={[styles.actionBtn, styles.disabledBtn]} disabled>
-                            <Text style={styles.disabledText}>Gifted</Text>
+                            <Text style={styles.disabledText}>Fully Gifted</Text>
                           </TouchableOpacity>
-                        ) : isReserved ? (
-                          <View style={styles.reservedBox}>
-                            <Text style={styles.reservedText}>In Cart</Text>
-                          </View>
-                        ) : isExpensive ? (
-                          <TouchableOpacity style={styles.contributeBtn} onPress={() => handleContribute(item)}>
-                            <Text style={styles.contributeText}>Contribute</Text>
+                        ) : isLocked && item.locked_by !== guestId ? (
+                          <TouchableOpacity style={[styles.actionBtn, styles.disabledBtn]} disabled>
+                            <Text style={styles.disabledText}>Pending</Text>
+                          </TouchableOpacity>
+                        ) : isLocked && item.locked_by === guestId ? (
+                          <TouchableOpacity style={styles.buyBtn} onPress={() => { setSelectedItem(item); setModalVisible(true); }}>
+                            <Text style={styles.buyText}>Resume</Text>
                           </TouchableOpacity>
                         ) : (
-                          <TouchableOpacity style={styles.buyBtn} onPress={() => handleBuy(item)}>
+                          <TouchableOpacity style={styles.buyBtn} onPress={() => handleBuyClick(item)}>
                             <Text style={styles.buyText}>Buy</Text>
                           </TouchableOpacity>
                         )}
@@ -130,6 +261,57 @@ const GuestRegistryScreen = () => {
           })
         )}
       </ScrollView>
+
+      {/* Contribution Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={cancelPurchase}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {selectedItem && (
+              <>
+                <Text style={styles.modalTitle}>Contribute to {selectedItem.name}</Text>
+                
+                {(() => {
+                   const r = parseFloat(selectedItem.required_amount) || selectedItem.price;
+                   const c = parseFloat(selectedItem.total_contribution) || 0;
+                   return (
+                     <Text style={styles.modalSub}>
+                        Remaining balance: <Text style={{fontWeight:'600'}}>${Math.max(0, r - c).toFixed(2)}</Text>
+                     </Text>
+                   );
+                })()}
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.currencySymbol}>$</Text>
+                  <TextInput
+                    style={styles.amountInput}
+                    keyboardType="numeric"
+                    placeholder="0.00"
+                    placeholderTextColor={COLORS.textTertiary}
+                    value={contribAmount}
+                    onChangeText={setContribAmount}
+                    autoFocus
+                  />
+                </View>
+                
+                <View style={styles.modalActions}>
+                  <TouchableOpacity style={styles.modalCancelBtn} onPress={cancelPurchase} disabled={isProcessing}>
+                    <Text style={styles.modalCancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity style={styles.modalSubmitBtn} onPress={submitContribution} disabled={isProcessing}>
+                    <Text style={styles.modalSubmitText}>{isProcessing ? "Processing..." : "Confirm Payment"}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -319,6 +501,88 @@ const styles = StyleSheet.create({
     color: COLORS.textTertiary,
     fontSize: SIZES.fontSmall,
     fontWeight: '600',
+  },
+  boughtByText: {
+    fontSize: SIZES.fontMicro,
+    color: COLORS.textSecondary,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  /* Modal Styles */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: SIZES.radiusLg,
+    borderTopRightRadius: SIZES.radiusLg,
+    padding: SIZES.xl,
+    paddingBottom: 40,
+  },
+  modalTitle: {
+    fontSize: SIZES.fontMedium,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  modalSub: {
+    fontSize: SIZES.fontRegular,
+    color: COLORS.textSecondary,
+    marginBottom: 24,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: COLORS.text,
+    paddingBottom: 8,
+    marginBottom: 32,
+  },
+  currencySymbol: {
+    fontSize: 32,
+    fontWeight: '500',
+    color: COLORS.text,
+    marginRight: 8,
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: 32,
+    fontWeight: '600',
+    color: COLORS.text,
+    padding: 0,
+    margin: 0,
+    outlineStyle: 'none', // Web fix
+  },
+  modalActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    backgroundColor: COLORS.borderLight,
+    borderRadius: SIZES.radiusFull,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: SIZES.fontRegular,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  modalSubmitBtn: {
+    flex: 2,
+    paddingVertical: 14,
+    backgroundColor: COLORS.text,
+    borderRadius: SIZES.radiusFull,
+    alignItems: 'center',
+  },
+  modalSubmitText: {
+    fontSize: SIZES.fontRegular,
+    fontWeight: '600',
+    color: COLORS.white,
   }
 });
 

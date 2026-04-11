@@ -10,6 +10,7 @@ import {
   ScrollView,
   TouchableWithoutFeedback,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import { COLORS, SIZES } from '../constants/colors';
 import InputField from '../components/InputField';

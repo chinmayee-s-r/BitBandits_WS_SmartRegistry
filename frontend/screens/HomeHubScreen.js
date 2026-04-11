@@ -11,11 +11,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
-const HomeHubScreen = ({ navigation }) => {
+const HomeHubScreen = ({ navigation, route }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim1 = useRef(new Animated.Value(20)).current;
   const slideAnim2 = useRef(new Animated.Value(20)).current;
   const slideAnim3 = useRef(new Animated.Value(20)).current;
+
+  // Grab user_id if passed
+  const user_id = route?.params?.user_id || '';
 
   useEffect(() => {
     Animated.parallel([
@@ -84,14 +87,14 @@ const HomeHubScreen = ({ navigation }) => {
         <Card
           title="Manage my registry"
           description="View, edit, and track your registry"
-          onPress={() => navigation.navigate('RegistryScreen')}
+          onPress={() => navigation.navigate('MyRegistryDashboard', { user_id })}
           animValue={slideAnim2}
         />
 
         <Card
           title="Find a registry"
           description="Search and purchase gifts for someone"
-          onPress={() => navigation.navigate('FindRegistry')}
+          onPress={() => navigation.navigate('FindRegistry', { user_id })}
           animValue={slideAnim3}
           style={styles.guestCard}
         />
