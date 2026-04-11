@@ -1,0 +1,34 @@
+# environment variables
+.env
+*.env
+backend/.env
+
+# python
+__pycache__/
+*.py[cod]
+*$py.class
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# expo / react native
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# os
+.DS_Store
+Thumbs.db
